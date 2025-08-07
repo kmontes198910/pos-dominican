@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: odata-v17-pvc
-  namespace: medinec-dev
+  name: odoo-prod-data-pvc
+  namespace: erp-kynsoft
 spec:
   accessModes:
     - ReadWriteOnce

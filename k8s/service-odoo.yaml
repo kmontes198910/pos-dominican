@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: odoo
-  namespace: medinec-dev
+  name: erp-prod
+  namespace: erp-kynsoft
 spec:
   selector:
-    app: odoo-v17
+    app: odoo-prod
   ports:
     - port: 8069
       protocol: TCP

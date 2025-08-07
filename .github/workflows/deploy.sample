@@ -1,0 +1,503 @@
+# name: 🚀 ERP Medinec CI/CD Pipeline
+
+# # ============================================================================
+# # WORKFLOW CONFIGURATION
+# # ============================================================================
+# on:
+#   push:
+#     branches:
+#       - master
+#       - main
+#       - develop
+#     paths-ignore:
+#       - 'README.md'
+#       - 'docs/**'
+#       - '*.md'
+  
+#   pull_request:
+#     branches:
+#       - master
+#       - main
+#     types: [opened, synchronize, reopened]
+  
+#   workflow_dispatch:
+#     inputs:
+#       environment:
+#         description: '🎯 Target Environment'
+#         required: true
+#         default: 'development'
+#         type: choice
+#         options:
+#           - development
+#           - staging
+#           - production
+#       force_rebuild:
+#         description: '🔨 Force rebuild (ignore cache)'
+#         required: false
+#         default: false
+#         type: boolean
+#       skip_tests:
+#         description: '⚡ Skip test execution'
+#         required: false
+#         default: false
+#         type: boolean
+
+# # ============================================================================
+# # ENVIRONMENT VARIABLES
+# # ============================================================================
+# env:
+#   # Application Configuration
+#   SERVICE_NAME: 'erp-medinec'
+#   SERVICE_PATH: '.'
+#   DOCKER_IMAGE_NAME: 'erp-medinec'
+  
+#   # Container Registry
+#   REGISTRY_URL: 'docker.io'
+#   REGISTRY_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+  
+#   # Kubernetes Configuration
+#   K8S_DEPLOYMENT_NAME: 'erp-medinec-deployment'
+#   K8S_CONTAINER_NAME: 'erp-medinec-container'
+#   K8S_SERVICE_NAME: 'erp-medinec-service'
+  
+#   # Deployment Settings
+#   DEPLOYMENT_TIMEOUT: '600s'
+#   HEALTH_CHECK_RETRIES: 5
+#   HEALTH_CHECK_INTERVAL: 10
+
+# # ============================================================================
+# # JOBS
+# # ============================================================================
+# jobs:
+#   # --------------------------------------------------------------------------
+#   # JOB 1: VALIDATION & TESTING
+#   # --------------------------------------------------------------------------
+#   validate-and-test:
+#     name: 🧪 Validate & Test
+#     runs-on: ubuntu-latest
+#     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && !inputs.skip_tests)
+    
+#     outputs:
+#       should-deploy: ${{ steps.changes.outputs.should-deploy }}
+#       test-results: ${{ steps.test.outputs.results }}
+    
+#     steps:
+#       - name: 📥 Checkout Repository
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+      
+#       - name: 🔍 Detect Changes
+#         id: changes
+#         run: |
+#           if git diff --name-only HEAD~1 | grep -E '\.(js|ts|jsx|tsx|py|java|php|go|rb|xml|po|pot)$' > /dev/null; then
+#             echo "should-deploy=true" >> $GITHUB_OUTPUT
+#             echo "📝 Code changes detected - deployment needed"
+#           else
+#             echo "should-deploy=false" >> $GITHUB_OUTPUT
+#             echo "📄 Only documentation changes detected"
+#           fi
+      
+#       - name: 🏗️ Setup Test Environment
+#         run: |
+#           echo "Setting up test environment for ${{ env.SERVICE_NAME }}..."
+#           # Add your test setup commands here
+#           # Example: npm install, pip install -r requirements.txt, etc.
+      
+#       - name: 🧪 Run Tests
+#         id: test
+#         run: |
+#           echo "Running comprehensive tests..."
+#           # Add your test commands here
+#           # Examples:
+#           # npm test
+#           # python -m pytest
+#           # go test ./...
+#           echo "results=passed" >> $GITHUB_OUTPUT
+#           echo "✅ All tests passed successfully"
+      
+#       - name: 📊 Upload Test Results
+#         if: always()
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: test-results
+#           path: |
+#             test-results/
+#             coverage/
+#           retention-days: 30
+
+#   # --------------------------------------------------------------------------
+#   # JOB 2: BUILD DOCKER IMAGE
+#   # --------------------------------------------------------------------------
+#   build:
+#     name: 🔨 Build Docker Image
+#     runs-on: ubuntu-latest
+#     needs: [validate-and-test]
+#     if: always() && (needs.validate-and-test.result == 'success' || needs.validate-and-test.result == 'skipped')
+    
+#     outputs:
+#       image-tag: ${{ steps.meta.outputs.tags }}
+#       image-digest: ${{ steps.build.outputs.digest }}
+#       image-version: ${{ steps.version.outputs.version }}
+    
+#     steps:
+#       - name: 📥 Checkout Repository
+#         uses: actions/checkout@v4
+      
+#       - name: 🏷️ Generate Version & Metadata
+#         id: version
+#         run: |
+#           # Generate semantic version
+#           BRANCH_NAME=${GITHUB_REF#refs/heads/}
+#           COMMIT_SHA=${GITHUB_SHA:0:8}
+#           BUILD_DATE=$(date -u +'%Y%m%d%H%M%S')
+          
+#           if [[ "$BRANCH_NAME" == "master" ]] || [[ "$BRANCH_NAME" == "main" ]]; then
+#             VERSION="v1.0.${BUILD_DATE}"
+#             ENVIRONMENT="production"
+#           elif [[ "$BRANCH_NAME" == "develop" ]]; then
+#             VERSION="v0.9.${BUILD_DATE}-dev"
+#             ENVIRONMENT="development"
+#           else
+#             VERSION="v0.8.${BUILD_DATE}-${BRANCH_NAME}"
+#             ENVIRONMENT="staging"
+#           fi
+          
+#           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+#           echo "commit-sha=${COMMIT_SHA}" >> $GITHUB_OUTPUT
+#           echo "build-date=${BUILD_DATE}" >> $GITHUB_OUTPUT
+#           echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+#           echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          
+#           echo "📋 Build Information:"
+#           echo "   🏷️ Version: ${VERSION}"
+#           echo "   🌍 Environment: ${ENVIRONMENT}"
+#           echo "   🌿 Branch: ${BRANCH_NAME}"
+#           echo "   📝 Commit: ${COMMIT_SHA}"
+      
+#       - name: 🔧 Set up QEMU
+#         uses: docker/setup-qemu-action@v3
+#         with:
+#           platforms: linux/amd64,linux/arm64
+      
+#       - name: 🔧 Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+#         with:
+#           driver-opts: |
+#             network=host
+      
+#       - name: 📦 Extract Metadata
+#         id: meta
+#         uses: docker/metadata-action@v5
+#         with:
+#           images: |
+#             ${{ env.REGISTRY_URL }}/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}
+#           tags: |
+#             type=ref,event=branch
+#             type=ref,event=pr
+#             type=sha,prefix={{branch}}-
+#             type=raw,value=${{ steps.version.outputs.version }}
+#             type=raw,value=latest,enable={{is_default_branch}}
+      
+#       - name: 🔐 Login to Container Registry
+#         uses: docker/login-action@v3
+#         with:
+#           registry: ${{ env.REGISTRY_URL }}
+#           username: ${{ env.REGISTRY_USERNAME }}
+#           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      
+#       - name: 🚀 Build and Push Docker Image
+#         id: build
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: ${{ env.SERVICE_PATH }}
+#           platforms: linux/amd64,linux/arm64
+#           push: true
+#           tags: ${{ steps.meta.outputs.tags }}
+#           labels: ${{ steps.meta.outputs.labels }}
+#           build-args: |
+#             PACKAGE_TOKEN=${{ secrets.PACKAGE_TOKEN }}
+#             BUILD_DATE=${{ steps.version.outputs.build-date }}
+#             VCS_REF=${{ github.sha }}
+#             VERSION=${{ steps.version.outputs.version }}
+#             ENVIRONMENT=${{ steps.version.outputs.environment }}
+#           cache-from: |
+#             type=gha,scope=build
+#             type=registry,ref=${{ env.REGISTRY_URL }}/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:cache
+#           cache-to: |
+#             type=gha,mode=max,scope=build
+#             type=registry,ref=${{ env.REGISTRY_URL }}/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:cache,mode=max
+#           no-cache: ${{ github.event.inputs.force_rebuild == 'true' }}
+      
+#       - name: 🔍 Verify Image
+#         run: |
+#           echo "🔍 Verifying built image..."
+#           IMAGE_TAG="${{ env.REGISTRY_URL }}/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+#           docker pull "${IMAGE_TAG}"
+#           docker inspect "${IMAGE_TAG}"
+#           echo "✅ Image verification completed"
+      
+#       - name: 🛡️ Security Scan (Optional)
+#         continue-on-error: true
+#         run: |
+#           echo "🛡️ Running security scan..."
+#           # Add security scanning tools like Trivy, Snyk, etc.
+#           # docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image ${{ steps.meta.outputs.tags }}
+#           echo "🛡️ Security scan completed"
+
+#   # --------------------------------------------------------------------------
+#   # JOB 3: DEPLOY TO KUBERNETES
+#   # --------------------------------------------------------------------------
+#   deploy:
+#     name: 🚢 Deploy to Kubernetes
+#     runs-on: ubuntu-latest
+#     needs: [validate-and-test, build]
+#     if: success() && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
+    
+#     environment:
+#       name: ${{ needs.validate-and-test.outputs.environment || 'production' }}
+#       url: ${{ steps.deploy.outputs.app-url }}
+    
+#     steps:
+#       - name: 📥 Checkout Repository
+#         uses: actions/checkout@v4
+      
+#       - name: 🔧 Determine Environment
+#         id: env
+#         run: |
+#           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+#             ENV="${{ github.event.inputs.environment }}"
+#             NAMESPACE="kynsoft-${{ github.event.inputs.environment }}"
+#           elif [[ "${{ github.ref }}" == "refs/heads/master" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+#             ENV="production"
+#             NAMESPACE="kynsoft-prod"
+#           elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+#             ENV="development"
+#             NAMESPACE="kynsoft-dev"
+#           else
+#             ENV="staging"
+#             NAMESPACE="kynsoft-staging"
+#           fi
+          
+#           echo "environment=${ENV}" >> $GITHUB_OUTPUT
+#           echo "namespace=${NAMESPACE}" >> $GITHUB_OUTPUT
+#           echo "🌍 Deploying to: ${ENV} environment (${NAMESPACE} namespace)"
+      
+#       - name: 🔧 Install Dependencies
+#         run: |
+#           echo "📦 Installing required tools..."
+#           sudo apt-get update -qq
+#           sudo apt-get install -y openvpn openvpn-systemd-resolved curl jq
+          
+#           # Install kubectl
+#           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+#           chmod +x kubectl
+#           sudo mv kubectl /usr/local/bin/
+#           kubectl version --client --output=yaml
+      
+#       - name: 🔐 Setup VPN Connection
+#         id: vpn
+#         run: |
+#           echo "🔐 Establishing secure VPN connection..."
+          
+#           # Create VPN configuration from secrets
+#           echo "${{ secrets.VPN_CONFIG }}" > vpn.ovpn
+#           echo "${{ secrets.VPN_USERNAME }}" > vpn-auth.txt
+#           echo "${{ secrets.VPN_PASSWORD }}" >> vpn-auth.txt
+          
+#           # Set secure permissions
+#           chmod 600 vpn.ovpn vpn-auth.txt
+          
+#           # Start VPN connection
+#           sudo openvpn --config vpn.ovpn --auth-user-pass vpn-auth.txt --daemon --log vpn.log --verb 1
+          
+#           # Wait for connection with smart retry
+#           echo "⏳ Waiting for VPN connection..."
+#           max_attempts=12
+#           attempt=1
+          
+#           while [ $attempt -le $max_attempts ]; do
+#             if ping -c 1 -W 2 ${{ secrets.K8S_CLUSTER_IP }} > /dev/null 2>&1; then
+#               echo "✅ VPN connection established (attempt $attempt)"
+#               echo "connected=true" >> $GITHUB_OUTPUT
+#               break
+#             fi
+#             echo "⏳ VPN connection attempt $attempt/$max_attempts..."
+#             sleep 5
+#             attempt=$((attempt + 1))
+#           done
+          
+#           if [ $attempt -gt $max_attempts ]; then
+#             echo "❌ VPN connection failed after $max_attempts attempts"
+#             echo "VPN Log:"
+#             sudo cat vpn.log 2>/dev/null || echo "Could not read VPN log"
+#             exit 1
+#           fi
+      
+#       - name: ⚙️ Configure Kubernetes Access
+#         run: |
+#           echo "⚙️ Configuring Kubernetes access..."
+#           mkdir -p ~/.kube
+          
+#           # Setup kubeconfig based on environment
+#           if [[ "${{ steps.env.outputs.environment }}" == "production" ]]; then
+#             echo "${{ secrets.KUBE_CONFIG_PROD }}" | base64 -d > ~/.kube/config
+#           elif [[ "${{ steps.env.outputs.environment }}" == "development" ]]; then
+#             echo "${{ secrets.KUBE_CONFIG_DEV }}" | base64 -d > ~/.kube/config
+#           else
+#             echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+#           fi
+          
+#           chmod 600 ~/.kube/config
+          
+#           # Verify connection
+#           echo "🔍 Testing Kubernetes connectivity..."
+#           kubectl cluster-info --request-timeout=10s
+#           kubectl get nodes --request-timeout=10s
+#           echo "✅ Kubernetes access confirmed"
+      
+#       - name: 🚀 Pre-deployment Validation
+#         run: |
+#           echo "🚀 Running pre-deployment checks..."
+#           NAMESPACE="${{ steps.env.outputs.namespace }}"
+          
+#           # Ensure namespace exists
+#           if ! kubectl get namespace "$NAMESPACE" > /dev/null 2>&1; then
+#             echo "📝 Creating namespace: $NAMESPACE"
+#             kubectl create namespace "$NAMESPACE"
+#           fi
+          
+#           # Check deployment exists
+#           if ! kubectl get deployment "${{ env.K8S_DEPLOYMENT_NAME }}" -n "$NAMESPACE" > /dev/null 2>&1; then
+#             echo "⚠️ Deployment '${{ env.K8S_DEPLOYMENT_NAME }}' not found in namespace '$NAMESPACE'"
+#             echo "Please ensure the deployment exists before running this workflow"
+            
+#             # List available deployments for debugging
+#             echo "Available deployments in namespace '$NAMESPACE':"
+#             kubectl get deployments -n "$NAMESPACE" || echo "No deployments found"
+#             exit 1
+#           fi
+          
+#           echo "✅ Pre-deployment validation completed"
+      
+#       - name: 🚢 Deploy Application
+#         id: deploy
+#         run: |
+#           echo "🚢 Starting deployment..."
+#           NAMESPACE="${{ steps.env.outputs.namespace }}"
+#           IMAGE_TAG="${{ env.REGISTRY_URL }}/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ needs.build.outputs.image-version }}"
+          
+#           echo "📦 Image: $IMAGE_TAG"
+#           echo "🎯 Deployment: ${{ env.K8S_DEPLOYMENT_NAME }}"
+#           echo "📍 Namespace: $NAMESPACE"
+#           echo "🏷️ Container: ${{ env.K8S_CONTAINER_NAME }}"
+          
+#           # Record deployment metadata
+#           kubectl annotate deployment "${{ env.K8S_DEPLOYMENT_NAME }}" \
+#             deployment.kubernetes.io/change-cause="GitHub Actions deployment - Commit: ${{ github.sha }} - Build: ${{ github.run_number }}" \
+#             -n "$NAMESPACE" --overwrite
+          
+#           # Update deployment with new image
+#           kubectl set image deployment/"${{ env.K8S_DEPLOYMENT_NAME }}" \
+#             "${{ env.K8S_CONTAINER_NAME }}"="$IMAGE_TAG" \
+#             -n "$NAMESPACE"
+          
+#           # Wait for rollout with timeout
+#           echo "⏳ Waiting for deployment rollout..."
+#           kubectl rollout status deployment/"${{ env.K8S_DEPLOYMENT_NAME }}" \
+#             -n "$NAMESPACE" \
+#             --timeout="${{ env.DEPLOYMENT_TIMEOUT }}"
+          
+#           echo "✅ Deployment completed successfully!"
+          
+#           # Set output for environment URL (customize as needed)
+#           echo "app-url=https://${{ env.SERVICE_NAME }}-${{ steps.env.outputs.environment }}.kynsoft.com" >> $GITHUB_OUTPUT
+      
+#       - name: 🔍 Post-deployment Health Check
+#         run: |
+#           echo "🔍 Running post-deployment health checks..."
+#           NAMESPACE="${{ steps.env.outputs.namespace }}"
+          
+#           # Get deployment status
+#           echo "📊 Deployment Status:"
+#           kubectl get deployment "${{ env.K8S_DEPLOYMENT_NAME }}" -n "$NAMESPACE" -o wide
+          
+#           # Check pod status
+#           echo "🏃 Pod Status:"
+#           kubectl get pods -n "$NAMESPACE" -l app="${{ env.SERVICE_NAME }}" -o wide
+          
+#           # Verify all pods are ready
+#           echo "🩺 Health Check:"
+#           ready_pods=$(kubectl get pods -n "$NAMESPACE" -l app="${{ env.SERVICE_NAME }}" -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' | grep -o "True" | wc -l)
+#           total_pods=$(kubectl get pods -n "$NAMESPACE" -l app="${{ env.SERVICE_NAME }}" --no-headers | wc -l)
+          
+#           echo "Ready Pods: $ready_pods/$total_pods"
+          
+#           if [ "$ready_pods" -eq "$total_pods" ] && [ "$total_pods" -gt 0 ]; then
+#             echo "✅ All pods are healthy and ready!"
+#           else
+#             echo "⚠️ Some pods are not ready. Checking logs..."
+#             kubectl logs -n "$NAMESPACE" -l app="${{ env.SERVICE_NAME }}" --tail=50 || true
+#           fi
+          
+#           # Check service status
+#           echo "🌐 Service Status:"
+#           kubectl get services -n "$NAMESPACE" -l app="${{ env.SERVICE_NAME }}" -o wide || echo "No services found"
+          
+#           # Show recent events
+#           echo "📋 Recent Events:"
+#           kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp --field-selector involvedObject.name="${{ env.K8S_DEPLOYMENT_NAME }}" | tail -5
+      
+#       - name: 📊 Deployment Summary
+#         if: success()
+#         run: |
+#           echo "🎉 DEPLOYMENT COMPLETED SUCCESSFULLY!"
+#           echo ""
+#           echo "📋 Deployment Summary:"
+#           echo "   🏷️ Service: ${{ env.SERVICE_NAME }}"
+#           echo "   📦 Image: ${{ env.REGISTRY_URL }}/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:${{ needs.build.outputs.image-version }}"
+#           echo "   🌍 Environment: ${{ steps.env.outputs.environment }}"
+#           echo "   📍 Namespace: ${{ steps.env.outputs.namespace }}"
+#           echo "   🕐 Deployed: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+#           echo "   📝 Commit: ${{ github.sha }}"
+#           echo "   👤 Triggered by: ${{ github.actor }}"
+#           echo "   🔄 Run: ${{ github.run_number }}"
+#           echo ""
+#           echo "🔗 Links:"
+#           echo "   📦 Image: https://hub.docker.com/r/${{ env.REGISTRY_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}"
+#           echo "   🌐 Application: ${{ steps.deploy.outputs.app-url }}"
+#           echo "   📊 Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      
+#       - name: 🧹 Cleanup
+#         if: always()
+#         run: |
+#           echo "🧹 Performing cleanup..."
+          
+#           # Stop VPN connection
+#           sudo pkill -f openvpn || true
+          
+#           # Remove sensitive files
+#           rm -f vpn.ovpn vpn-auth.txt ~/.kube/config vpn.log
+          
+#           # Clean up Docker resources to save space
+#           docker system prune -f --volumes || true
+          
+#           echo "✅ Cleanup completed"
+      
+#       - name: 🚨 Failure Notification
+#         if: failure()
+#         run: |
+#           echo "🚨 DEPLOYMENT FAILED!"
+#           echo ""
+#           echo "❌ Failure Details:"
+#           echo "   🏷️ Service: ${{ env.SERVICE_NAME }}"
+#           echo "   🌍 Environment: ${{ steps.env.outputs.environment }}"
+#           echo "   📝 Commit: ${{ github.sha }}"
+#           echo "   👤 Triggered by: ${{ github.actor }}"
+#           echo "   🔄 Run: ${{ github.run_number }}"
+#           echo ""
+#           echo "🔍 Check the workflow logs for detailed error information:"
+#           echo "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+#           # Add notification logic here (Slack, Teams, Email, etc.)
+#           # Example: curl -X POST -H 'Content-type: application/json' --data '{"text":"Deployment failed!"}' ${{ secrets.SLACK_WEBHOOK_URL }}

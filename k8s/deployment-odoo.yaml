@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: odoo-v17
-  namespace: medinec-dev
+  name: odoo-prod
+  namespace: erp-kynsoft
   labels:
-    app: odoo-v17
+    app: odoo-prod
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: odoo-v17
+      app: odoo-prod
   template:
     metadata:
       labels:
-        app: odoo-v17
+        app: odoo-prod
     spec:
       containers:
-        - name: odoo-v7
-          image: kmontes2020/medinec-v17:v1
+        - name: odoo-prod
+          image: kmontes2020/erp-kynsoft-odoo-v18:prod
           imagePullPolicy: Always
           ports:
             - containerPort: 8069
@@ -27,4 +27,4 @@ spec:
       volumes:
         - name: filestore
           persistentVolumeClaim:
-            claimName: odata-v17-pvc
+            claimName: odoo-prod-data-pvc
