@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: odoo-prod
-          image: kmontes2020/erp-kynsoft-odoo-v18:prod
+          image: kmontes2020/erp-kynsoft-odoo-v18:main
           imagePullPolicy: Always
           ports:
             - containerPort: 8069
