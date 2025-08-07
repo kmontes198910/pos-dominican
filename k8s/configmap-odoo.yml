@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: odoo-prod
+    namespace: erp-kynsoft
+data:
+    odoo.conf: |
+        [options]
+        addons_path = /mnt/extra-addons/dev/,
+                                    /mnt/extra-addons/oca/l10n-ecuador/,
+                                    /mnt/extra-addons/oca/server_tools/,
+                                    /mnt/extra-addons/oca/account_analytic/,
+                                    /mnt/extra-addons/pro/odoo_mates/accountant/,
+                                    /mnt/extra-addons/pro/mukit/enterprise_theme/,
+                                    /mnt/extra-addons/test/,
+
+        admin_passwd = XWepOkWiBRIAVZHP
+        dev_mode = all
+        log_level = debug
+        ;proxy_mode = True
+        ;interface=127.0.0.1
+        port=8069
+        ;gevent_port=8072
+        ;without_demo = all
+        limit_time_real = 1200
+        limit_time_cpu = 1200
+        db_host = zeus-rw.postgres-prod.svc.cluster.local
+        db_port = 5432
+        db_user = odoo
+        db_password = XWepOkWiBRIAVZHPLY1zd5r3ZOhv1okNuhAIoLB6tzChJmjE0YxnY
+        ;db_sslmode = disable
+        ;db_name = odoo-erp
+        dbfilter = .*v18$
+        ;dbfilter = ^comienza y termina$ %contiene
+        ;list_db=False

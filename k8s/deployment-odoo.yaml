@@ -24,7 +24,13 @@ spec:
           volumeMounts:
             - name: filestore
               mountPath: /var/lib/odoo
+            - name: odoo-conf-v
+              mountPath: /etc/odoo
+              readOnly: true
       volumes:
         - name: filestore
           persistentVolumeClaim:
             claimName: odoo-prod-data-pvc
+        - name: odoo-conf-v
+          configMap:
+            name: odoo-prod
