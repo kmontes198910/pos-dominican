@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo-v17
+  namespace: medinec-dev
+  labels:
+    app: odoo-v17
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo-v17
+  template:
+    metadata:
+      labels:
+        app: odoo-v17
+    spec:
+      containers:
+        - name: odoo-v7
+          image: kmontes2020/medinec-v17:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8069
+          volumeMounts:
+            - name: filestore
+              mountPath: /var/lib/odoo
+      volumes:
+        - name: filestore
+          persistentVolumeClaim:
+            claimName: odata-v17-pvc

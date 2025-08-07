@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo-pg
+  namespace: medinec-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo-pg
+  template:
+    metadata:
+      labels:
+        app: odoo-pg
+    spec:
+      containers:
+        - name: odoo-pg
+          image: postgres:17-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: PGPORT
+              value: '5432'
+            - name: POSTGRES_USER
+              value: odoo
+            - name: POSTGRES_PASSWORD
+              value: odoo
+            - name: POSTGRES_DB
+              value: postgres
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: pgdata
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: pgdata-pvc
+      restartPolicy: Always

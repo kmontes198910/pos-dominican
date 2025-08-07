@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo-pg
+  namespace: medinec-dev
+spec:
+  selector:
+    app: odoo-pg
+  ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+  type: ClusterIP

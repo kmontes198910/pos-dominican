@@ -1,0 +1,69 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    field.cattle.io/publicEndpoints: >-
+      [{"addresses":["10.1.0.27"],"port":80,"protocol":"HTTP","serviceName":"medinec-dev:odoo","ingressName":"medinec-dev:erp-doctorkyn","hostname":"erp-doctorkyn.kynsoft.net","path":"/","allNodes":false}]
+  creationTimestamp: '2025-07-21T13:18:12Z'
+  generation: 2
+  managedFields:
+    - apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:status:
+          f:loadBalancer:
+            f:ingress: {}
+      manager: nginx-ingress-controller
+      operation: Update
+      subresource: status
+      time: '2025-07-21T13:18:44Z'
+    - apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:field.cattle.io/publicEndpoints: {}
+        f:spec:
+          f:defaultBackend:
+            .: {}
+            f:service:
+              .: {}
+              f:name: {}
+              f:port: {}
+          f:ingressClassName: {}
+          f:rules: {}
+          f:tls: {}
+      manager: rancher
+      operation: Update
+      time: '2025-07-21T13:19:36Z'
+  name: erp-doctorkyn
+  namespace: medinec-dev
+  resourceVersion: '24031218'
+  uid: bf24d6a8-9b56-4e36-b889-add739c5a2cf
+spec:
+  defaultBackend:
+    service:
+      name: odoo
+      port:
+        number: 8069
+  ingressClassName: nginx
+  rules:
+    - host: erp-doctorkyn.kynsoft.net
+      http:
+        paths:
+          - backend:
+              service:
+                name: odoo
+                port:
+                  number: 8069
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - erp-doctorkyn
+      secretName: medinec-tls-dev
+status:
+  loadBalancer:
+    ingress:
+      - ip: 10.1.0.27

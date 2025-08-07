@@ -1,0 +1,70 @@
+name: "local"
+
+networks:
+    proxy:
+      external: true
+    odoo-net:
+      external: true
+      name: odoo-net
+
+volumes:
+  odb-data:
+  odata:
+
+services:
+  odoo: # Recuerda que este nombre es el que utiliza traefik
+    # image: odoo:17.0
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        BUILD_DATE: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+    restart: unless-stopped
+    env_file:
+      - ${PWD}/.env
+    volumes:
+      - "${PWD}/extra-addons:/mnt/extra-addons"           # persistencia de modulos desarrollo local
+      - "${PWD}/conf/odoo.conf:/etc/odoo/odoo.conf"       # persistencia de odoo.conf desarrollo local
+      - "odata:/var/lib/odoo"                             # Filestore
+      - "/etc/localtime:/etc/localtime"                   # Set host localtime as container localtime
+      - "/etc/timezone:/etc/timezone"                     # Set timezone as container timezone
+    labels:
+      - traefik.enable=true
+      # Main HTTP router (web client, API, etc.)
+      - traefik.http.routers.odoo.rule=Host(`www.gestionproyecta.com`)
+      - traefik.http.routers.odoo.entrypoints=websecure
+      - traefik.http.routers.odoo.tls=true
+      - traefik.http.services.odoo.loadbalancer.server.port=8069
+
+      # Websocket/longpolling router
+      - traefik.http.routers.odoo-websocket.rule=Host(`www.gestionproyecta.com`) && PathPrefix(`/websocket`)
+      - traefik.http.routers.odoo-websocket.entrypoints=websecure
+      - traefik.http.routers.odoo-websocket.tls=true
+      - traefik.http.services.odoo-websocket.loadbalancer.server.port=8072
+      # Websocket headers
+      - traefik.http.routers.odoo-websocket.middlewares=websocket-headers
+      - traefik.http.middlewares.websocket-headers.headers.customrequestheaders.Upgrade=websocket
+      - traefik.http.middlewares.websocket-headers.headers.customrequestheaders.Connection=Upgrade
+    ports:
+      - "8069:8069"
+      - "8072:8072"
+    # depends_on:
+    #   - odb
+    # command: ["-d","odoov3","-i","base"]
+    networks:
+      - odoo-net
+      - proxy
+
+  # odb:
+  #   image: postgres:16-alpine
+  #   restart: unless-stopped
+  #   volumes:
+  #     - "odb-data:/var/lib/postgresql/data"              # persistencia de Bases de Datos
+  #     - "/etc/localtime:/etc/localtime"                  # Set host localtime as container localtime
+  #     - "/etc/timezone:/etc/timezone"                    # Set timezone as container timezone
+  #   env_file:
+  #     - ${PWD}/.env
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - odoo-net
