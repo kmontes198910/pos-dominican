@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: odoo-pg
-  namespace: medinec-dev
+  name: pos-dom-pg
+  namespace: pos-sale-dom
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: odoo-pg
+      app: pos-dom-pg
   template:
     metadata:
       labels:
-        app: odoo-pg
+        app: pos-dom-pg
     spec:
       containers:
-        - name: odoo-pg
+        - name: pos-dom-pg
           image: postgres:17-alpine
           imagePullPolicy: IfNotPresent
           env:

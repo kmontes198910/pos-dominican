@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: odoo-prod
-  namespace: erp-kynsoft
+  name: pos-dom
+  namespace: pos-sale-dom
   labels:
-    app: odoo-prod
+    app: pos-dom
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: odoo-prod
+      app: pos-dom
   template:
     metadata:
       labels:
-        app: odoo-prod
+        app: pos-dom
     spec:
       containers:
-        - name: odoo-prod
+        - name: pos-dom
           image: kmontes2020/erp-kynsoft-odoo-v18:main
           imagePullPolicy: Always
           ports:
@@ -30,7 +30,7 @@ spec:
       volumes:
         - name: filestore
           persistentVolumeClaim:
-            claimName: odoo-prod-data-pvc
+            claimName: pos-dom-data-pvc
         - name: odoo-conf-v
           configMap:
-            name: odoo-prod
+            name: pos-dom

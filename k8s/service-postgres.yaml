@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: odoo-pg
-  namespace: medinec-dev
+  name: pos-dom-pg
+  namespace: pos-sale-dom
 spec:
   selector:
-    app: odoo-pg
+    app: pos-dom-pg
   ports:
     - port: 5432
       protocol: TCP

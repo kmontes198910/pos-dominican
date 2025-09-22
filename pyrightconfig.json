@@ -1,5 +1,8 @@
 {
     "extraPaths": [
+        "/home/odixan/develop/odoo/odoo-src/addons",
+        "/home/odixan/develop/odoo/odoo-src",
+        "./extra-addons",
         "./src",
         "./tests",
         "./odoo"

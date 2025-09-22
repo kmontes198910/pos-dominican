@@ -1,28 +1,28 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: erp-prod
+  name: pos-dom
   namespace: erp-kynsoft
   annotations: {}
 spec:
   ingressClassName: nginx
   defaultBackend:
     service:
-      name: erp-prod
+      name: pos-dom
       port:
         number: 8069
   rules:
-    - host: erp.kynsoft.net
+    - host: point-sale.kynsoft.net
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: erp-prod
+                name: pos-dom
                 port:
                   number: 8069
   tls:
     - hosts:
-        - erp.kynsoft.net
+        - point-sale.kynsoft.net
       secretName: erp-kynsoft-ssl

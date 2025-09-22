@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-    name: odoo-prod
-    namespace: erp-kynsoft
+    name: pos-dom
+    namespace: pos-sale-dom
 data:
     odoo.conf: |
         [options]
@@ -31,5 +31,5 @@ data:
         ;db_sslmode = disable
         ;db_name = odoo-erp
         dbfilter = .*v18$
-        ;dbfilter = ^comienza y termina$ %contiene
+        ;dbfilter = (^)comienza, ($)termina, (%)contiene, (.)no vacio, (*)incluye vacio
         ;list_db=False

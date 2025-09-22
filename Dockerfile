@@ -7,7 +7,7 @@ ARG BUILD_DATE
 # Metadata
 LABEL Name="medinec" \
       Version="0.0.1" \
-      Email="example@company.com" \
+      Email="gg@kynsoft.com" \
       Vendor="KyNSoft" \
       build_date="${BUILD_DATE}"
 

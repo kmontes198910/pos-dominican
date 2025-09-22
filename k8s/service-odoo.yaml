@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: erp-prod
-  namespace: erp-kynsoft
+  name: pos-dom
+  namespace: pos-sale-dom
 spec:
   selector:
-    app: odoo-prod
+    app: pos-dom
   ports:
     - port: 8069
       protocol: TCP

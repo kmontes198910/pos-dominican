@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: odoo-prod-data-pvc
-  namespace: erp-kynsoft
+  name: pos-dom-data-pvc
+  namespace: pos-sale-dom
 spec:
   accessModes:
     - ReadWriteOnce
