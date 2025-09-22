@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pos-dom
+  name: odoo
   namespace: pos-sale-dom
   labels:
-    app: pos-dom
+    app: odoo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pos-dom
+      app: odoo
   template:
     metadata:
       labels:
-        app: pos-dom
+        app: odoo
     spec:
       containers:
-        - name: pos-dom
+        - name: odoo
           image: kmontes2020/erp-kynsoft-odoo-v18:main
           imagePullPolicy: Always
           ports:

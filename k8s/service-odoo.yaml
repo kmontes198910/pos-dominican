@@ -5,7 +5,7 @@ metadata:
   namespace: pos-sale-dom
 spec:
   selector:
-    app: pos-dom
+    app: odoo
   ports:
     - port: 8069
       protocol: TCP

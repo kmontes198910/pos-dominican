@@ -1,9 +1,9 @@
-name: 🚀 ERP Medinec CI/CD Pipeline
+name: 🚀 POS Dominican CI/CD Pipeline
 
 env:
   SERVICE_NAME: 'odoo'
   ODOO_VERSION: 'v18'
-  K8S_NAMESPACE_DEV: 'erp-kynsoft'
+  K8S_NAMESPACE_DEV: 'pos-sale-dom'
 
 on:
   workflow_dispatch:
